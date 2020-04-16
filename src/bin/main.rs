@@ -1,25 +1,7 @@
 // modeled after
 // http://norvig.com/lispy.html
 
-#![warn(
-    // clippy::restriction,
-    // clippy::cargo
-    clippy::all,
-    clippy::pedantic,
-    clippy::nursery,
-    clippy::clone_on_ref_ptr
-)]
-#![allow(
-    clippy::shadow_unrelated,
-    clippy::cognitive_complexity,
-    clippy::too_many_lines,
-    clippy::use_debug,
-    clippy::dbg_macro,
-    clippy::print_stdout,
-    clippy::missing_docs_in_private_items,
-    clippy::implicit_return,
-    clippy::option_unwrap_used
-)]
+#![warn(clippy::all)]
 
 // GDB on macOS issue
 //https://youtrack.jetbrains.com/issue/CPP-14546
@@ -28,10 +10,10 @@
 
 use std::rc::Rc;
 
-use scheme_lib::*;
+use scheme_lib::{list, run, test_eq, Expression};
 
 fn main() {
-    use Expression::*;
+    use Expression::{List, Number, SString};
 
     std::env::set_var("RUST_BACKTRACE", "full");
     color_backtrace::install();
@@ -41,4 +23,6 @@ fn main() {
 
     let input = "(define a '(1 2 3)) (cdr a)";
     test_eq!(run(input) => list!(Number(2), Number(3)));
+    // let input = "(define fib (lambda (n) (if (< n 3) 1 (+ (fib (- n 1)) (fib (- n 2)))))) (fib 36)";
+    // dbg!(run(input));
 }

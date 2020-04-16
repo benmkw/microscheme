@@ -1,5 +1,3 @@
-#![allow(clippy::enum_glob_use)]
-
 use super::*;
 use Expression::*;
 

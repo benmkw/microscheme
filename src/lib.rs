@@ -15,11 +15,11 @@
     clippy::print_stdout,
     clippy::missing_docs_in_private_items,
     clippy::implicit_return,
-    clippy::option_unwrap_used
+    clippy::option_unwrap_used,
+    clippy::enum_glob_use
 )]
 
-use itertools::EitherOrBoth::Both;
-use itertools::*;
+use itertools::{EitherOrBoth::Both, Itertools};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -139,8 +139,8 @@ pub fn tokenize(s: &str) -> Vec<Token> {
 
     let mut tokens = Vec::<Token>::new();
 
-    let mut iter = s.chars();
-    while let Some(c) = iter.clone().peekable().peek() {
+    let mut iter = s.chars().peekable();
+    while let Some(c) = iter.peek() {
         if any_of!(*c => ' ', '\n', '\r', '\t') {
             iter.next();
             continue;
@@ -195,22 +195,20 @@ pub fn tokenize(s: &str) -> Vec<Token> {
             _ => {
                 let ret: Token;
 
-                if c.to_string().parse::<i64>().is_ok() {
-                    let num: String = iter
-                        .take_while_ref(|&c| c.to_string().parse::<i64>().is_ok())
-                        .collect();
+                if c.is_digit(10) {
+                    let num: String = iter.take_while_ref(|&c| c.is_digit(10)).collect();
 
                     if let Ok(num) = num.parse::<i64>() {
                         ret = Number(num);
                     } else {
-                        unreachable!()
-                        // panic!("{:?} {}", num, "could not handle the number\n");
+                        panic!("{:?} {}", num, "could not handle the number\n");
                     }
                 } else {
                     let string: String = iter
                         .by_ref()
                         .take_while_ref(|&c| none_of!(c => ' ', '(', ')', '+', '-', '*', '/'))
                         .collect();
+                    // TODO could/ should use a trie here for matching
                     match string.as_ref() {
                         "if" => ret = TokIf,
                         "#f" | "#F" => ret = TokFalse,
@@ -222,7 +220,7 @@ pub fn tokenize(s: &str) -> Vec<Token> {
                         "cdr" => ret = Cdr,
                         "cons" => ret = Cons,
                         "let" => ret = Let,
-                        _ => ret = Symbol(string.to_string()),
+                        _ => ret = Symbol(string),
                     };
                 }
                 ret
@@ -234,7 +232,7 @@ pub fn tokenize(s: &str) -> Vec<Token> {
     tokens
 }
 
-// serialize to json https://github.com/serde-rs/json
+// TODO serialize to json https://github.com/serde-rs/json
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expression {
     Number(i64),
@@ -260,12 +258,10 @@ pub enum Expression {
     Equal,
 }
 
-// fn inside_braces(token_iter: &mut std::slice::Iter<'_, Token>) -> Vec<Token> {
 fn inside_braces(token_iter: &mut std::iter::Peekable<std::slice::Iter<'_, Token>>) -> Vec<Token> {
     let mut parenthesis_depth = 1;
 
     token_iter
-        .by_ref()
         .take_while(|t| {
             match t {
                 Token::LParen => parenthesis_depth += 1,
@@ -500,12 +496,12 @@ pub fn eval(expressions: &[RExpression], env: &REnvironment) -> Option<RExpressi
 
             List(exprs) => match &*exprs[0] {
                 Number(x) => {
-                    // special, maybe remove some point?
+                    // special, maybe remove at some point?
                     debug_assert_eq!(exprs.len(), 1);
                     Some(Rc::new(Number(*x)))
                 }
                 ExprFalse => {
-                    // special, maybe remove some point?
+                    // special, maybe remove at some point?
                     debug_assert_eq!(exprs.len(), 1);
                     Some(Rc::new(ExprFalse))
                 }
@@ -599,13 +595,12 @@ pub fn eval(expressions: &[RExpression], env: &REnvironment) -> Option<RExpressi
 
                 // should never happen inside the list,
                 Procedure(_) | SString(_) => {
-                    dbg!(&exprs);
-                    unreachable!()
+                    panic!("{:?}", &exprs);
                 }
 
                 // procedure call
                 // List would be a lambda which would first get evaluated
-                // sy,bol would be the name of a function and thus get resolved to one
+                // symbol would be the name of a function and thus get resolved to one
                 Symbol(_) | List(_) => {
                     let firstval = eval(&[Rc::clone(&exprs[0])], env).unwrap();
 
@@ -633,8 +628,7 @@ pub fn eval(expressions: &[RExpression], env: &REnvironment) -> Option<RExpressi
 
             // these should only ever happen inside the list
             ExprIf | Quote | Define | Set | Lambda => {
-                dbg!(&expression);
-                unreachable!()
+                panic!("{:?}", &expression);
             }
         };
 
@@ -648,17 +642,16 @@ pub fn eval(expressions: &[RExpression], env: &REnvironment) -> Option<RExpressi
 
 #[must_use]
 pub fn run(input: &str) -> Option<RExpression> {
-    println!("{:?}", input);
+    // println!("{:?}", input);
 
     let tokens: Vec<Token> = tokenize(input);
-    dbg!(&tokens);
+    // dbg!(&tokens);
 
     let expression = parse(&tokens);
-    dbg!(&expression);
+    // dbg!(&expression);
 
     let environment = Rc::new(RefCell::new(Environment::default()));
-    let exp = eval(&expression, &environment);
+    eval(&expression, &environment)
 
-    print!("DONE \n\n\n");
-    exp
+    // print!("DONE \n\n\n");
 }
