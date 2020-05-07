@@ -1,0 +1,11 @@
+[package]
+name = "scheme_bin"
+version = "0.2.0"
+authors = ["Benedikt Mandelkow <benedikt.mandelkow@rwth-aachen.de>"]
+edition = "2018"
+publish = false
+
+[dependencies]
+color-backtrace = "*"
+
+scheme_lib = { path = "../scheme_lib" }
