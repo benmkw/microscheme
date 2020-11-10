@@ -15,7 +15,7 @@
     clippy::print_stdout,
     clippy::missing_docs_in_private_items,
     clippy::implicit_return,
-    clippy::option_unwrap_used,
+    clippy::unwrap_used,
     clippy::enum_glob_use
 )]
 
@@ -539,12 +539,12 @@ pub fn eval(expressions: &[RExpression], env: &REnvironment) -> Option<RExpressi
                 Cons => {
                     debug_assert_eq!(exprs.len(), 3);
                     eval(&[Rc::clone(&exprs[1])], env).and_then(|exprs_one| {
-                        eval(&[Rc::clone(&exprs[2])], env).and_then(|exprs_two| {
+                        eval(&[Rc::clone(&exprs[2])], env).map(|exprs_two| {
                             // do not concatenate the empty list onto sth.
                             if *exprs_two == List(vec![]) {
-                                Some(Rc::new(List(vec![exprs_one])))
+                                Rc::new(List(vec![exprs_one]))
                             } else {
-                                Some(Rc::new(List(vec![exprs_one, exprs_two])))
+                                Rc::new(List(vec![exprs_one, exprs_two]))
                             }
                         })
                     })
@@ -607,13 +607,7 @@ pub fn eval(expressions: &[RExpression], env: &REnvironment) -> Option<RExpressi
                     if let Procedure(procedure) = &*firstval {
                         let args = exprs[1..]
                             .iter()
-                            .filter_map(|e| {
-                                if let Some(val) = eval(&[Rc::clone(e)], env) {
-                                    Some(val)
-                                } else {
-                                    None
-                                }
-                            })
+                            .filter_map(|e| eval(&[Rc::clone(e)], env))
                             .collect::<Vec<RExpression>>();
                         procedure.call(&args)
                     } else {
